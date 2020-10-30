@@ -107,3 +107,12 @@ function metastore_entity_view_alter(array &$build, Drupal\Core\Entity\EntityInt
     $build['field_json_metadata'][0]['#context']['value'] = json_encode($object);
   }
 }
+function metastore_theme() {
+  return [
+    'node__data' => [
+      'template' => 'node--data',
+      'base hook' => 'node',
+      'file' => 'metastore.theme.inc',
+    ],
+  ];
+}
