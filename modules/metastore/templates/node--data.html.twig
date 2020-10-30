@@ -73,28 +73,32 @@
     */
 #}
 <article{{ attributes }}>
-    <h3>THIS IS A DATASET!</h3>
     {{ title_prefix }}
-    {{ foo }}
     {% if label and not page %}
     <h2{{ title_attributes }}>
         <a href="{{ url }}" rel="bookmark">{{ label }}</a>
     </h2>
     {% endif %}
     {{ title_suffix }}
-
-    {% if display_submitted %}
-    <footer>
-        {{ author_picture }}
-        <div{{ author_attributes }}>
-        {% trans %}Submitted by {{ author_name }} on {{ date }}{% endtrans %}
-        {{ metadata }}
-        </div>
-    </footer>
-    {% endif %}
-    <h3>THIS IS A DATASET!</h3>
     <div{{ content_attributes }}>
-    {{ content }}
+        {% if not page %}
+        {{ dataset.description | raw }}
+        {% endif %}
+        {% if page %}
+        <h2>Theme</h2>
+        <ul>{% for theme in dataset.themes %}
+            <li>{{ theme }}</li>
+        {% endfor %}</ul>
+        {{ dataset.description | raw }}
+        <h2>Keywords</h2>
+        <ul>{% for keyword in dataset.keywords %}
+            <li>{{ keyword }}</li>
+        {% endfor %}</ul>
+        {% for distribution in dataset.distributions %}
+            {{ distribution }}
+        {% endfor %}
+        {{ dataset.metadata_table }}
+        {% endif %}
     </div>
 
 </article>
