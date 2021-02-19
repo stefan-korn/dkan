@@ -2,9 +2,10 @@
 
 namespace Drupal\Tests\metastore\Storage;
 
+use Drupal\Core\Entity\ContentEntityType;
 use Drupal\Core\Entity\EntityTypeManager;
-use Drupal\metastore\Storage\AbstractEntityStorage;
 use Drupal\node\NodeStorage;
+use Drupal\metastore\Storage\NodeStorage as MetastoreNodeStorage;
 use MockChain\Chain;
 use PHPUnit\Framework\TestCase;
 
@@ -19,9 +20,10 @@ class DataTest extends TestCase {
 
     $etm = (new Chain($this))
       ->add(EntityTypeManager::class, 'getStorage', NodeStorage::class)
+      ->add(NodeStorage::class, 'getEntityType', ContentEntityType::class)
       ->getMock();
 
-    $data = new AbstractEntityStorage('dataset', $etm);
+    $data = new MetastoreNodeStorage('dataset', $etm);
     $this->assertInstanceOf(NodeStorage::class, $data->getEntityStorage());
   }
 
