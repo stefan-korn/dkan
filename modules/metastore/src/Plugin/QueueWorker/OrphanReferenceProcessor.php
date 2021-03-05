@@ -135,7 +135,7 @@ class OrphanReferenceProcessor extends QueueWorkerBase implements ContainerFacto
         try {
           $this->eventDispatcher->dispatch(OrphaningDistribution::EVENT_ORPHANING_DISTRIBUTION, new OrphaningDistribution($uuid));
         }
-        catch (Exception $e) {
+        catch (\Exception $e) {
           print 'Message: ' . $e->getMessage();
         }
       }

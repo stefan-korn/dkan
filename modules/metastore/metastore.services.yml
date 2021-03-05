@@ -59,6 +59,16 @@ services:
     arguments:
       - '@database'
 
+  dkan.metastore.event_subscriber.mapper_cleanup:
+    class: \Drupal\metastore\EventSubscriber\MapperCleanup
+    tags:
+      - { name: event_subscriber }
+
+  dkan.metastore.event_subscriber.remove_local_file:
+    class: \Drupal\metastore\EventSubscriber\RemoveLocalFile
+    tags:
+      - { name: event_subscriber }
+
   # @deprecated
   metastore.service:
     class: \Drupal\metastore\Service
@@ -86,6 +96,7 @@ services:
     class: \Drupal\metastore\Storage\DataFactory
     arguments:
       - '@entity_type.manager'
+
   metastore.referencer:
     class: \Drupal\metastore\Reference\Referencer
     arguments:
@@ -108,12 +119,4 @@ services:
       - '@config.factory'
       - '@queue'
 
-  metastore.event_subscriber:
-    class: \Drupal\metastore\EventSubscriber\MapperCleanup
-    tags:
-      - { name: event_subscriber }
 
-  metastore.event_subscriber:
-    class: \Drupal\metastore\EventSubscriber\RemoveLocalFile
-    tags:
-      - { name: event_subscriber }
