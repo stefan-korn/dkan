@@ -302,7 +302,14 @@ class DashboardForm extends FormBase {
       // Gather dataset information.
       $datasetInfo = $this->datasetInfo->gather($datasetId);
       if (empty($datasetInfo['latest_revision'])) {
-        continue;
+        $datasetInfo = [
+          'latest_revision' => [
+            'uuid' => $datasetId,
+            'revision_id' => $datasetInfo['notice']
+          ]
+        ];
+        //continue;
+
       }
       // Build a table row using it's details and harvest status.
       $datasetRow = $this->buildRevisionRows($datasetInfo, $harvestLoad[$datasetId] ?? 'N/A');
@@ -378,7 +385,7 @@ class DashboardForm extends FormBase {
     // Create a row for each dataset revision (there could be both a published
     // and latest).
     foreach (array_values($datasetInfo) as $rev) {
-      $distributions = $rev['distributions'];
+      $distributions = $rev['distributions'] ?? [];
       // For first distribution, combine with revision information.
       $rows[] = array_merge(
         $this->buildRevisionRow($rev, count($distributions), $harvestStatus),
@@ -409,7 +416,7 @@ class DashboardForm extends FormBase {
   protected function buildRevisionRow(array $rev, int $resourceCount, string $harvestStatus) {
     return [
       [
-        'rowspan' => $resourceCount,
+        'rowspan' => $resourceCount !== 0 ? $resourceCount : 1,
         'data' => [
           '#theme' => 'datastore_dashboard_dataset_cell',
           '#uuid' => $rev['uuid'],
@@ -418,17 +425,17 @@ class DashboardForm extends FormBase {
         ],
       ],
       [
-        'rowspan' => $resourceCount,
+        'rowspan' => $resourceCount !== 0 ? $resourceCount : 1,
         'class' => $rev['moderation_state'],
         'data' => [
           '#theme' => 'datastore_dashboard_revision_cell',
           '#revision_id' => $rev['revision_id'],
-          '#modified' => $this->dateFormatter->format(strtotime($rev['modified_date_dkan']), 'short'),
+          '#modified' => !empty($rev['modified_date_dkan']) ? $this->dateFormatter->format(strtotime($rev['modified_date_dkan']), 'short') : '',
           '#moderation_state' => $rev['moderation_state'],
         ],
       ],
       [
-        'rowspan' => $resourceCount,
+        'rowspan' => $resourceCount !== 0 ? $resourceCount : 1,
         'data' => $harvestStatus,
         'class' => strtolower($harvestStatus),
       ],
