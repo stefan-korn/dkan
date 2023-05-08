@@ -136,6 +136,9 @@ class HarvestCommands extends DrushCommands {
       catch (\Exception $e) {
         $message = $e->getMessage();
       }
+      else {
+        $message = "No harvest {$id} deregistered. Check if it exists.";
+      }
     }
     else {
       $message = "Skipped deregistering harvest {$id}";
