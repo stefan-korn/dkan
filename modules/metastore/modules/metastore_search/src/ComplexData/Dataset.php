@@ -20,6 +20,10 @@ class Dataset extends ComplexDataFacade {
    */
   private $data;
 
+  private static $encode_chars = ['@', ':'];
+
+  private static $decode_chars = ['__at__', '__colon__'];
+
   /**
    * Definition.
    */
@@ -37,8 +41,24 @@ class Dataset extends ComplexDataFacade {
       $defs = self::getPropertyDefinition($type, $object, $property);
       $definitions = array_merge($definitions, $defs);
     }
-
+    $definitions = self::definitionDecode($definitions);
     return $definitions;
+  }
+
+  private static function definitionDecode($definitions) {
+    $new_definitions = [];
+    foreach ($definitions as $property => $definition) {
+      $new_definitions[self::propertyEncode($property)] = $definition;
+    }
+    return $new_definitions;
+  }
+
+  private static function propertyDecode($property_name) {
+    return str_replace(self::$decode_chars, self::$encode_chars, $property_name);
+  }
+
+  private static function propertyEncode($property_name) {
+    return str_replace(self::$encode_chars, self::$decode_chars, $property_name);
   }
 
   /**
@@ -115,17 +135,17 @@ class Dataset extends ComplexDataFacade {
     if (!isset($definitions[$property_name])) {
       return NULL;
     }
-
+    $decoded_property_name = self::propertyDecode($property_name);
     $definition = $definitions[$property_name];
 
     if ($definition instanceof ListDataDefinition) {
       $property = new ItemList($definition, $property_name);
-      $values = $this->getArrayValues($property_name);
+      $values = $this->getArrayValues($decoded_property_name);
       $property->setValue($values);
     }
     else {
       $property = new class ($definition, $property_name) extends TypedData{};
-      $value = $this->getPropertyValue($property_name);
+      $value = $this->getPropertyValue($decoded_property_name);
       $property->setValue($value);
     }
 
