@@ -29,6 +29,8 @@ class ImportQueueWorkerTest extends KernelTestBase {
   ];
 
   public function testErrorPath() {
+    $this->installEntitySchema('resource_mapping');
+
     // The result we'll mock to come from the datastore service.
     $result = new Result();
     $result->setStatus(Result::ERROR);
@@ -41,9 +43,9 @@ class ImportQueueWorkerTest extends KernelTestBase {
         $this->container->get('dkan.datastore.service.resource_localizer'),
         $this->container->get('dkan.datastore.service.factory.import'),
         $this->container->get('queue'),
-        $this->container->get('dkan.common.job_store'),
-        $this->container->get('dkan.datastore.import_info_list'),
+        $this->container->get('dkan.datastore.import_job_store_factory'),
         $this->container->get('dkan.datastore.service.resource_processor.dictionary_enforcer'),
+        $this->container->get('dkan.metastore.resource_mapper'),
       ])
       ->onlyMethods(['import'])
       ->getMock();
@@ -79,6 +81,7 @@ class ImportQueueWorkerTest extends KernelTestBase {
   }
 
   public function testRequeue() {
+    $this->installEntitySchema('resource_mapping');
     // The result we'll mock to come from the datastore service.
     $result = new Result();
     $result->setStatus(Result::STOPPED);
@@ -90,9 +93,9 @@ class ImportQueueWorkerTest extends KernelTestBase {
         $this->container->get('dkan.datastore.service.resource_localizer'),
         $this->container->get('dkan.datastore.service.factory.import'),
         $this->container->get('queue'),
-        $this->container->get('dkan.common.job_store'),
-        $this->container->get('dkan.datastore.import_info_list'),
+        $this->container->get('dkan.datastore.import_job_store_factory'),
         $this->container->get('dkan.datastore.service.resource_processor.dictionary_enforcer'),
+        $this->container->get('dkan.metastore.resource_mapper'),
       ])
       ->onlyMethods(['import'])
       ->getMock();
@@ -166,6 +169,7 @@ class ImportQueueWorkerTest extends KernelTestBase {
    * @covers ::processItem
    */
   public function testProcessItemImportException() {
+    $this->installEntitySchema('resource_mapping');
     // Mock the logger so we can tell when the error occurs.
     $logger = $this->getMockForAbstractClass(LoggerChannelInterface::class);
     // We expect an error to be logged, and we set an expectation for the message.
@@ -229,9 +233,9 @@ class ImportQueueWorkerTest extends KernelTestBase {
         $this->container->get('dkan.datastore.service.resource_localizer'),
         $this->container->get('dkan.datastore.service.factory.import'),
         $this->container->get('queue'),
-        $this->container->get('dkan.common.job_store'),
-        $this->container->get('dkan.datastore.import_info_list'),
+        $this->container->get('dkan.datastore.import_job_store_factory'),
         $this->container->get('dkan.datastore.service.resource_processor.dictionary_enforcer'),
+        $this->container->get('dkan.metastore.resource_mapper'),
       ])
       ->onlyMethods(['getStorage'])
       ->getMock();

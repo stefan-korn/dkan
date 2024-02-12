@@ -12,7 +12,8 @@ use Drupal\metastore\Exception\AlreadyRegistered;
 use Drupal\metastore\MetastoreService;
 use Drupal\metastore\ResourceMapper;
 
-use GuzzleHttp\Client as GuzzleClient;
+use GuzzleHttp\Client;
+use GuzzleHttp\Exception\GuzzleException;
 
 /**
  * Metastore referencer service.
@@ -26,7 +27,7 @@ class Referencer {
    *
    * @var string
    */
-  protected const DEFAULT_MIME_TYPE = 'text/plain';
+  public const DEFAULT_MIME_TYPE = 'text/plain';
 
   /**
    * Storage factory interface service.
@@ -43,17 +44,26 @@ class Referencer {
   public MetastoreUrlGenerator $metastoreUrlGenerator;
 
   /**
+   * Guzzle HTTP client.
+   *
+   * @var \GuzzleHttp\Client
+   */
+  private Client $httpClient;
+
+  /**
    * Constructor.
    */
   public function __construct(
     ConfigFactoryInterface $configService,
     FactoryInterface $storageFactory,
-    MetastoreUrlGenerator $metastoreUrlGenerator
+    MetastoreUrlGenerator $metastoreUrlGenerator,
+    Client $httpClient
   ) {
     $this->setConfigService($configService);
     $this->storageFactory = $storageFactory;
     $this->setLoggerFactory(\Drupal::service('logger.factory'));
     $this->metastoreUrlGenerator = $metastoreUrlGenerator;
+    $this->httpClient = $httpClient;
   }
 
   /**
@@ -67,12 +77,15 @@ class Referencer {
    */
   public function reference($data) {
     if (!is_object($data)) {
-      throw new \Exception("data must be an object.");
+      throw new \Exception('data must be an object.');
     }
     // Cycle through the dataset properties we seek to reference.
     foreach ($this->getPropertyList() as $property_id) {
       if (isset($data->{$property_id})) {
         $data->{$property_id} = $this->referenceProperty($property_id, $data->{$property_id});
+
+        // Remove de-referenced info from metadata.
+        unset($data->{'%Ref:' . $property_id});
       }
     }
     return $data;
@@ -238,38 +251,38 @@ class Referencer {
       }
     }
     catch (AlreadyRegistered $e) {
-      $info = json_decode($e->getMessage());
-
+      $already_registered = $e->getAlreadyRegistered();
       // If resource mapper registration failed due to this resource already
       // being registered, generate a new version of the resource and update the
       // download URL with the new version ID.
-      if (isset($info[0]->identifier)) {
-        /** @var \Drupal\common\DataResource $stored */
-        $stored = $this->getFileMapper()->get($info[0]->identifier, DataResource::DEFAULT_SOURCE_PERSPECTIVE);
-        $downloadUrl = $this->handleExistingResource($info, $stored, $mimeType);
+      if ($entity = reset($already_registered) ?? FALSE) {
+        $stored = $this->getFileMapper()->get(
+          $entity->get('identifier')->getString(),
+          DataResource::DEFAULT_SOURCE_PERSPECTIVE
+        );
+        $downloadUrl = $this->handleExistingResource($stored, $mimeType);
       }
     }
-
     return $downloadUrl;
   }
 
   /**
    * Get download URL for existing resource.
    *
-   * @param array $info
-   *   Info.
-   * @param \Drupal\common\DataResource $stored
-   *   Stored data resource object.
+   * @param \Drupal\common\DataResource $existing
+   *   Existing data resource object.
    * @param string $mimeType
    *   MIME type.
    *
    * @return string
    *   The download URL.
    */
-  private function handleExistingResource(array $info, DataResource $stored, string $mimeType): string {
-    if ($info[0]->perspective == DataResource::DEFAULT_SOURCE_PERSPECTIVE &&
-      (ResourceMapper::newRevision() == 1 || $stored->getMimeType() != $mimeType)) {
-      $new = $stored->createNewVersion();
+  private function handleExistingResource(DataResource $existing, string $mimeType): string {
+    if (
+      $existing->getPerspective() == DataResource::DEFAULT_SOURCE_PERSPECTIVE &&
+      (ResourceMapper::newRevision() == 1 || $existing->getMimeType() != $mimeType)
+    ) {
+      $new = $existing->createNewVersion();
       // Update the MIME type, since this may be updated by the user.
       $new->changeMimeType($mimeType);
 
@@ -277,7 +290,7 @@ class Referencer {
       $downloadUrl = $new->getUniqueIdentifier();
     }
     else {
-      $downloadUrl = $stored->getUniqueIdentifier();
+      $downloadUrl = $existing->getUniqueIdentifier();
     }
     return $downloadUrl;
   }
@@ -341,8 +354,12 @@ class Referencer {
 
     // Perform HTTP Head request against the supplied URL in order to determine
     // the content type of the remote resource.
-    $client = new GuzzleClient();
-    $response = $client->head($downloadUrl);
+    try {
+      $response = $this->httpClient->head($downloadUrl);
+    }
+    catch (GuzzleException $exception) {
+      return $mime_type;
+    }
     // Extract the full value of the content type header.
     $content_type = $response->getHeader('Content-Type');
     // Attempt to extract the mime type from the content type header.
@@ -365,7 +382,7 @@ class Referencer {
    * @todo Update the UI to set mediaType when a format is selected.
    */
   private function getMimeType($distribution): string {
-    $mimeType = "text/plain";
+    $mimeType = self::DEFAULT_MIME_TYPE;
 
     // If we have a mediaType set, use that.
     if (isset($distribution->mediaType)) {
@@ -383,7 +400,8 @@ class Referencer {
     elseif (isset($distribution->downloadURL)) {
       // Determine whether the supplied distribution has a local or remote
       // resource.
-      $is_local = $distribution->downloadURL !== UrlHostTokenResolver::hostify($distribution->downloadURL);
+      $is_local = $distribution->downloadURL !==
+        UrlHostTokenResolver::hostify($distribution->downloadURL);
       $mimeType = $is_local ?
         $this->getLocalMimeType($distribution->downloadURL) :
         $this->getRemoteMimeType($distribution->downloadURL);
@@ -416,7 +434,7 @@ class Referencer {
     if ($node = reset($nodes)) {
       // @todo if referencing node in draft state, don't publish referenced node
       // If an existing referenced node is found but unpublished, publish it.
-      if ($node->get('moderation_state')->value !== "published") {
+      if ($node->get('moderation_state')->value !== 'published') {
         $node->set('moderation_state', 'published');
         $node->save();
       }
