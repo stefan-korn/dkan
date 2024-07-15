@@ -7,6 +7,7 @@ use Drupal\Core\Config\ConfigFactoryInterface;
 use Psr\Log\LoggerInterface;
 
 use Drupal\metastore\Exception\MissingObjectException;
+use Psr\Log\LogLevel;
 
 /**
  * Metastore dereferencer.
@@ -169,7 +170,7 @@ class Dereferencer {
     // If a property node was not found, it most likely means it was deleted
     // while still being referenced.
     $this->logger->log(
-      'value_referencer',
+      LogLevel::WARNING,
       'Property @property_id reference @uuid not found',
       [
         '@property_id' => $property_id,
