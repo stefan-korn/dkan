@@ -20,28 +20,28 @@ class MysqlImportFactory implements ImportFactoryInterface {
    *
    * @var \Drupal\datastore\Storage\ImportJobStoreFactory
    */
-  private ImportJobStoreFactory $importJobStoreFactory;
+  protected ImportJobStoreFactory $importJobStoreFactory;
 
   /**
    * Database table factory service.
    *
    * @var \Drupal\datastore_mysql_import\Storage\MySqlDatabaseTableFactory
    */
-  private $databaseTableFactory;
+  protected $databaseTableFactory;
 
   /**
    * DKAN logger channel service.
    *
    * @var \Psr\Log\LoggerInterface
    */
-  private LoggerInterface $logger;
+  protected LoggerInterface $logger;
 
   /**
    * Event dispatcher service.
    *
    * @var \Symfony\Component\EventDispatcher\EventDispatcherInterface
    */
-  private EventDispatcherInterface $eventDispatcher;
+  protected EventDispatcherInterface $eventDispatcher;
 
   /**
    * Constructor.
