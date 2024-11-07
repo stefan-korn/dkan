@@ -239,6 +239,31 @@ class DashboardForm extends FormBase {
   }
 
   /**
+   * Filter datasets with importable distributions
+   *
+   * @param array $dataset_uuids
+   *   Datasets to be filtered.
+   *
+   * @return array
+   *   Filtered datasets.
+   */
+  protected function filterImportableDatasets($dataset_uuids) {
+    $datasets_filtered = [];
+    foreach ($dataset_uuids as $dataset_uuid) {
+      $dataset = $this->datasetInfo->gather($dataset_uuid);
+      foreach ($dataset as $rev) {
+        $distributions = array_filter($rev['distributions'], function ($v) {
+          return !isset($v['mime_type']) || in_array($v['mime_type'], DataResource::IMPORTABLE_FILE_TYPES);
+        });
+        if (!empty($distributions)) {
+          $datasets_filtered[] = $dataset_uuid;
+        }
+      }
+    }
+    return $datasets_filtered;
+  }
+
+  /**
    * Retrieve list of UUIDs for datasets matching the given filters.
    *
    * @param string[] $filters
@@ -259,7 +284,7 @@ class DashboardForm extends FormBase {
     // belonging to the specfied harvest.
     elseif (isset($filters['harvest_id'])) {
       $harvestLoad = iterator_to_array($this->getHarvestLoadStatus($filters['harvest_id']));
-      $datasets = array_keys($harvestLoad);
+      $datasets = $this->filterImportableDatasets(array_keys($harvestLoad));
       $total = count($datasets);
       $currentPage = $this->pagerManager->createPager($total, $this->itemsPerPage)->getCurrentPage();
 
@@ -269,14 +294,10 @@ class DashboardForm extends FormBase {
     // If no filter values were supplied, fetch from the list of all dataset
     // UUIDs.
     else {
-      $total = $this->metastore->count('dataset', TRUE);
+      $datasets_filtered = $this->filterImportableDatasets($this->metastore->getIdentifiers('dataset', NULL, NULL, TRUE));
+      $total = count($datasets_filtered);
       $currentPage = $this->pagerManager->createPager($total, $this->itemsPerPage)->getCurrentPage();
-      $datasets = $this->metastore->getIdentifiers(
-        'dataset',
-        ($currentPage * $this->itemsPerPage),
-        $this->itemsPerPage,
-        TRUE
-      );
+      $datasets = array_slice($datasets_filtered, $currentPage * $this->itemsPerPage, $this->itemsPerPage);
     }
 
     return $datasets;
